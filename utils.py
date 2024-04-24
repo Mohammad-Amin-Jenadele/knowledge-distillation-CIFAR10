@@ -63,3 +63,32 @@ def load_cifar10(val_ratio):
     y_train = y_train[:split_index]
 
     return (x_train, y_train), (x_test, y_test), (x_val, y_val)
+
+# Defining sample_plot function which randomly plot 10 images of dataset with their corresponding labels (y is one hotted)
+def sample_plot(x , y , num_to_class_dic):
+    plt.figure(figsize=(12, 6))
+    random_number = np.random.randint(0 , len(x) , 10)
+    for i in range(10):
+        img_x = x[random_number[i]]
+        ax = plt.subplot(2, 5 , i + 1)
+        plt.imshow(img_x)
+        plt.title(num_to_class_dic[np.argmax(y[random_number[i]])],fontsize = 15)
+        plt.axis("off")
+    plt.show()
+
+
+# Defining MobileNetV2_model that gives MobileNetV2 model
+def MobileNetV2_model(weights):
+    model = tf.keras.applications.MobileNetV2(
+    include_top=False,
+    weights = weights
+    )
+    return model
+
+# Defining ResNet50_model that gives ResNet50 model
+def ResNet50_model():
+    model = tf.keras.applications.ResNet50(
+    include_top=False,
+    weights="imagenet",
+)
+    return model
