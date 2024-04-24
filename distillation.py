@@ -10,7 +10,7 @@ from keras import ops
 
 
 class Distillator(keras.Model):
-    def __init__(self, teacher, student, alpha, tau):
+    def __init__(self, teacher, student, alpha, temperature):
         """_summary_
 
         Args:
@@ -24,7 +24,8 @@ class Distillator(keras.Model):
         super().__init__()
         self.teacher = teacher 
         self.student = student
-        self.alpha = alpha        
+        self.alpha = alpha    
+        self.temperature = temperature   
         
         def compile(self,optimizer,
                     metrics,
@@ -43,3 +44,27 @@ class Distillator(keras.Model):
             super().compile(optimizer=optimizer, metrics=metrics)
             self.student_loss = student_loss
             self.distillation_loss = distillation_loss
+            
+        def calculate_loss(self, X, Y, y_prediction):
+            """_summary_
+
+            Args:
+                X (_type_): _description_
+                Y (_type_): _description_
+                y_prediction (_type_): _description_
+
+            Returns:
+                _type_: _description_
+            """
+            teacher_prediction = self.teacher(X, training=False)
+            student_loss = self.student_loss(Y, y_prediction)
+            
+            distillation_loss = self.(ops.softmax(teacher_prediction / self.temperature),
+                                      ops.softmax(y_prediction, self.temperature),
+                                      ) * (self.temperature ** 2)
+            
+            loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
+            
+            return loss 
+            
+            
