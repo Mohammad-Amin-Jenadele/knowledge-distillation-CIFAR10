@@ -3,68 +3,61 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
-from keras import layers
-from keras import ops
-
-# ------ 
+from keras import layers, ops
 
 
 class Distillator(keras.Model):
-    def __init__(self, teacher, student, alpha, temperature):
-        """_summary_
+    def __init__(self, teacher: keras.Model, student: keras.Model, alpha: float, temperature: float):
+        """
+        Initializes the Distillator class which implements knowledge distillation from a teacher model to a student model.
 
         Args:
-            teacher (_type_): _description_
-            student (_type_): _description_
-            alpha (_type_): _description_
-            tau (_type_): _description_
-        
-        Exeption
+            teacher (keras.Model): The teacher model from which knowledge is distilled.
+            student (keras.Model): The student model that learns from the teacher.
+            alpha (float): The weighting factor for the student's loss relative to the distillation loss.
+            temperature (float): The temperature factor used in softening probability distributions, facilitating distillation.
         """
         super().__init__()
         self.teacher = teacher 
         self.student = student
         self.alpha = alpha    
         self.temperature = temperature   
+
+    def compile(self, optimizer: keras.optimizers.Optimizer, metrics: list, student_loss: tf.keras.losses.Loss, distillator_loss: tf.keras.losses.Loss):
+        """
+        Configures the model for training by setting the optimizer, metrics, and loss functions.
+
+        Args:
+            optimizer (keras.optimizers.Optimizer): The optimizer to use during training.
+            metrics (list): The list of metrics to be evaluated by the model during training and testing.
+            student_loss (tf.keras.losses.Loss): The loss function that measures how well the student model is doing with respect to the true labels.
+            distillator_loss (tf.keras.losses.Loss): The loss function used for distillation, comparing the softened outputs of the teacher and student.
+        """
+        super().compile(optimizer=optimizer, metrics=metrics)
+        self.student_loss = student_loss
+        self.distillator_loss = distillator_loss
+
+    def calculate_loss(self, X: np.ndarray, Y: np.ndarray, y_prediction: np.ndarray) -> tf.Tensor:
+        """
+        Calculate the combined student and distillation losses.
+
+        Args:
+            X (np.ndarray): Input data to the teacher and student models.
+            Y (np.ndarray): True labels corresponding to X for the student's learning.
+            y_prediction (np.ndarray): The predictions made by the student model on X.
+
+        Returns:
+            tf.Tensor: The weighted sum of student and distillation losses.
+        """
+        teacher_prediction = self.teacher(X, training=False)
+        student_loss = self.student_loss(Y, y_prediction)
         
-        def compile(self,optimizer,
-                    metrics,
-                    student_loss,
-                    distillator_loss,
-                    ):
-            """_summary_
-
-            Args:
-                optimizer (_type_): _description_
-                metrics (_type_): _description_
-                student_loss_fn (_type_): _description_
-                distillator_loss_fn (_type_): _description_
-            """
-            
-            super().compile(optimizer=optimizer, metrics=metrics)
-            self.student_loss = student_loss
-            self.distillator_loss = distillator_loss
-            
-        def calculate_loss(self, X, Y, y_prediction):
-            """_summary_
-
-            Args:
-                X (_type_): _description_
-                Y (_type_): _description_
-                y_prediction (_type_): _description_
-
-            Returns:
-                _type_: _description_
-            """
-            teacher_prediction = self.teacher(X, training=False)
-            student_loss = self.student_loss(Y, y_prediction)
-            
-            distillation_loss = self.distillator_loss(ops.softmax(teacher_prediction / self.temperature),
-                                      ops.softmax(y_prediction, self.temperature),
-                                      ) * (self.temperature ** 2)
-            
-            loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
-            
-            return loss 
+        distillation_loss = self.distillator_loss(ops.softmax(teacher_prediction / self.temperature),
+                                    ops.softmax(y_prediction, self.temperature),
+                                    ) * (self.temperature ** 2)
+        
+        loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
+        
+        return loss 
             
             
