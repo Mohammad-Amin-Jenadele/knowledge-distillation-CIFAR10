@@ -30,7 +30,7 @@ class Distillator(keras.Model):
         def compile(self,optimizer,
                     metrics,
                     student_loss,
-                    distillation_loss,
+                    distillator_loss,
                     ):
             """_summary_
 
@@ -38,12 +38,12 @@ class Distillator(keras.Model):
                 optimizer (_type_): _description_
                 metrics (_type_): _description_
                 student_loss_fn (_type_): _description_
-                distillation_loss_fn (_type_): _description_
+                distillator_loss_fn (_type_): _description_
             """
             
             super().compile(optimizer=optimizer, metrics=metrics)
             self.student_loss = student_loss
-            self.distillation_loss = distillation_loss
+            self.distillator_loss = distillator_loss
             
         def calculate_loss(self, X, Y, y_prediction):
             """_summary_
@@ -59,7 +59,7 @@ class Distillator(keras.Model):
             teacher_prediction = self.teacher(X, training=False)
             student_loss = self.student_loss(Y, y_prediction)
             
-            distillation_loss = self.(ops.softmax(teacher_prediction / self.temperature),
+            distillation_loss = self.distillator_loss(ops.softmax(teacher_prediction / self.temperature),
                                       ops.softmax(y_prediction, self.temperature),
                                       ) * (self.temperature ** 2)
             
