@@ -23,18 +23,18 @@ class Distillator(keras.Model):
         self.alpha = alpha    
         self.temperature = temperature   
 
-    def compile(self, optimizer: keras.optimizers.Optimizer, metrics: list, student_loss: tf.keras.losses.Loss, distillator_loss: tf.keras.losses.Loss):
+    def compile(self, optimizer: keras.optimizers.Optimizer, metrics: list, student_loss_: tf.keras.losses.Loss, distillator_loss: tf.keras.losses.Loss):
         """
         Configures the model for training by setting the optimizer, metrics, and loss functions.
 
         Args:
             optimizer (keras.optimizers.Optimizer): The optimizer to use during training.
             metrics (list): The list of metrics to be evaluated by the model during training and testing.
-            student_loss (tf.keras.losses.Loss): The loss function that measures how well the student model is doing with respect to the true labels.
+            student_loss_ (tf.keras.losses.Loss): The loss function that measures how well the student model is doing with respect to the true labels.
             distillator_loss (tf.keras.losses.Loss): The loss function used for distillation, comparing the softened outputs of the teacher and student.
         """
         super().compile(optimizer=optimizer, metrics=metrics)
-        self.student_loss = student_loss
+        self.student_loss_ = student_loss_
         self.distillator_loss = distillator_loss
 
     def calculate_loss(self, X: np.ndarray, Y: np.ndarray, y_prediction: np.ndarray) -> tf.Tensor:
@@ -50,7 +50,7 @@ class Distillator(keras.Model):
             tf.Tensor: The weighted sum of student and distillation losses.
         """
         teacher_prediction = self.teacher(X, training=False)
-        student_loss = self.student_loss(Y, y_prediction)
+        student_loss = self.student_loss_(Y, y_prediction)
         
         distillation_loss = self.distillator_loss(ops.softmax(teacher_prediction / self.temperature),
                                     ops.softmax(y_prediction, self.temperature),
