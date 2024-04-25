@@ -60,4 +60,14 @@ class Distillator(keras.Model):
         
         return loss 
             
-            
+        def call(self, x: tf.Tensor) -> tf.Tensor:
+            """
+            Forward pass for the Distillator model, utilizing only the student model.
+
+            Args:
+                x (tf.Tensor): Input tensor containing features.
+
+            Returns:
+                tf.Tensor: Output tensor from the student model after processing input 'x'.
+            """
+            return self.student(x)
