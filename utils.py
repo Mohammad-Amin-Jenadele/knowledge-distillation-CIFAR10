@@ -81,7 +81,7 @@ def sample_plot(x , y , num_to_class_dic):
 def MobileNetV2_model(weights , input_shape):
     model = tf.keras.applications.MobileNetV2(
     include_top=False,
-    weights = weights
+    weights = weights,
     input_shape = input_shape
     )
     return model
