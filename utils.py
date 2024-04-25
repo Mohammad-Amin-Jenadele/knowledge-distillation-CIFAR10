@@ -78,10 +78,11 @@ def sample_plot(x , y , num_to_class_dic):
 
 
 # Defining MobileNetV2_model that gives MobileNetV2 model
-def MobileNetV2_model(weights):
+def MobileNetV2_model(weights , input_shape):
     model = tf.keras.applications.MobileNetV2(
     include_top=False,
-    weights = weights
+    weights = weights,
+    input_shape = input_shape
     )
     return model
 
@@ -89,6 +90,7 @@ def MobileNetV2_model(weights):
 def ResNet50_model():
     model = tf.keras.applications.ResNet50(
     include_top=False,
+    input_shape=(224, 224, 3),
     weights="imagenet",
 )
     return model
