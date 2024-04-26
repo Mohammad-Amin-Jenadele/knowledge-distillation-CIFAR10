@@ -71,7 +71,7 @@ class Distillator(keras.Model):
         self.compiled_metrics.update_state(y, student_predictions)
         return {m.name: m.result() for m in self.metrics}
             
-        def call(self, x: tf.Tensor) -> tf.Tensor:
+    def call(self, x: tf.Tensor) -> tf.Tensor:
             """
             Forward pass for the Distillator model, utilizing only the student model.
 
