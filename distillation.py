@@ -3,7 +3,9 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
-from keras import layers, ops
+from keras import layers
+from typing import Tuple, Dict
+
 
 
 class Distillator(keras.Model):
@@ -23,42 +25,51 @@ class Distillator(keras.Model):
         self.alpha = alpha    
         self.temperature = temperature   
 
-    def compile(self, optimizer: keras.optimizers.Optimizer, metrics: list, student_loss_: tf.keras.losses.Loss, distillator_loss: tf.keras.losses.Loss):
+    def compile(self, optimizer: keras.optimizers.Optimizer, metrics: list, student_loss: tf.keras.losses.Loss, distillation_loss: tf.keras.losses.Loss):
         """
         Configures the model for training by setting the optimizer, metrics, and loss functions.
 
         Args:
             optimizer (keras.optimizers.Optimizer): The optimizer to use during training.
             metrics (list): The list of metrics to be evaluated by the model during training and testing.
-            student_loss_ (tf.keras.losses.Loss): The loss function that measures how well the student model is doing with respect to the true labels.
-            distillator_loss (tf.keras.losses.Loss): The loss function used for distillation, comparing the softened outputs of the teacher and student.
+            student_loss (tf.keras.losses.Loss): The loss function that measures how well the student model is doing with respect to the true labels.
+            distillation_loss (tf.keras.losses.Loss): The loss function used for distillation, comparing the softened outputs of the teacher and student.
         """
         super().compile(optimizer=optimizer, metrics=metrics)
-        self.student_loss_ = student_loss_
-        self.distillator_loss = distillator_loss
+        self.student_loss = student_loss
+        self.distillation_loss = distillation_loss
 
-    def calculate_loss(self, X: np.ndarray, Y: np.ndarray, y_prediction: np.ndarray) -> tf.Tensor:
+    def train_step(self, data: Tuple[tf.Tensor, tf.Tensor]) -> Dict[str, tf.Tensor]:
         """
-        Calculate the combined student and distillation losses.
+        Perform a single training step using one batch of data.
+
+        This function updates the student model by applying gradient descent to minimize a combined loss calculated 
+        from the student's predictions and a distillation loss from the teacher's predictions.
 
         Args:
-            X (np.ndarray): Input data to the teacher and student models.
-            Y (np.ndarray): True labels corresponding to X for the student's learning.
-            y_prediction (np.ndarray): The predictions made by the student model on X.
+            data (Tuple[tf.Tensor, tf.Tensor]): A tuple containing two elements: inputs `x` and labels `y`.
 
         Returns:
-            tf.Tensor: The weighted sum of student and distillation losses.
+            Dict[str, tf.Tensor]: A dictionary mapping metric names to their current value.
         """
-        teacher_prediction = self.teacher(X, training=False)
-        student_loss = self.student_loss_(Y, y_prediction)
-        
-        distillation_loss = self.distillator_loss(ops.softmax(teacher_prediction / self.temperature),
-                                    ops.softmax(y_prediction, self.temperature),
-                                    ) * (self.temperature ** 2)
-        
-        loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
-        
-        return loss 
+        x, y = data
+        with tf.GradientTape() as tape:
+            student_predictions = self.student(x, training=True)
+            teacher_predictions = self.teacher(x, training=False)
+
+            student_loss = self.student_loss(y, student_predictions)
+            distillation_loss = self.distillation_loss(
+                tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
+                tf.nn.softmax(student_predictions / self.temperature, axis=1)
+            )
+            loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
+
+        trainable_vars = self.student.trainable_variables
+        gradients = tape.gradient(loss, trainable_vars)
+        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+
+        self.compiled_metrics.update_state(y, student_predictions)
+        return {m.name: m.result() for m in self.metrics}
             
         def call(self, x: tf.Tensor) -> tf.Tensor:
             """
