@@ -3,7 +3,9 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
-from keras import layers, ops
+from keras import layers
+from typing import Tuple, Dict
+
 
 
 class Distillator(keras.Model):
@@ -37,7 +39,19 @@ class Distillator(keras.Model):
         self.student_loss = student_loss
         self.distillation_loss = distillation_loss
 
-    def train_step(self, data):
+    def train_step(self, data: Tuple[tf.Tensor, tf.Tensor]) -> Dict[str, tf.Tensor]:
+        """
+        Perform a single training step using one batch of data.
+
+        This function updates the student model by applying gradient descent to minimize a combined loss calculated 
+        from the student's predictions and a distillation loss from the teacher's predictions.
+
+        Args:
+            data (Tuple[tf.Tensor, tf.Tensor]): A tuple containing two elements: inputs `x` and labels `y`.
+
+        Returns:
+            Dict[str, tf.Tensor]: A dictionary mapping metric names to their current value.
+        """
         x, y = data
         with tf.GradientTape() as tape:
             student_predictions = self.student(x, training=True)
